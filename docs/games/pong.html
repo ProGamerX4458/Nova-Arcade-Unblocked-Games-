@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pong 1972</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    body {
+      background: #020617;
+      color: #f8fafc;
+      font-family: monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+    .topbar {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 12px;
+      align-items: center;
+    }
+    .mode-btn {
+      background: #0f172a;
+      border: 1px solid #334155;
+      color: #94a3b8;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .mode-btn.active {
+      background: #0284c7;
+      color: #fff;
+      border-color: #38bdf8;
+    }
+    canvas {
+      background: #000;
+      border: 2px solid #334155;
+      border-radius: 6px;
+      box-shadow: 0 0 20px rgba(56, 189, 248, 0.15);
+    }
+    .tip {
+      margin-top: 12px;
+      color: #64748b;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <button id="btn1P" class="mode-btn active" onclick="setMode('1P')">1 Player (vs AI)</button>
+    <button id="btn2P" class="mode-btn" onclick="setMode('2P')">2 Players (Local)</button>
+  </div>
+
+  <canvas id="c" width="600" height="400"></canvas>
+
+  <div id="tip" class="tip">Player 1: W / S • First to 10 points wins</div>
+
+  <script>
+    const canvas = document.getElementById('c');
+    const ctx = canvas.getContext('2d');
+    const btn1P = document.getElementById('btn1P');
+    const btn2P = document.getElementById('btn2P');
+    const tipEl = document.getElementById('tip');
+
+    let mode = '1P'; // '1P' or '2P'
+    let p1Score = 0;
+    let p2Score = 0;
+
+    const padW = 12;
+    const padH = 70;
+    const p1 = { x: 20, y: 165, vy: 0, speed: 6 };
+    const p2 = { x: canvas.width - 20 - padW, y: 165, vy: 0, speed: 6 };
+
+    const ball = {
+      x: canvas.width / 2,
+      y: canvas.height / 2,
+      r: 6,
+      vx: 4,
+      vy: 2,
+      speed: 5
+    };
+
+    // Audio
+    const actx = new (window.AudioContext || window.webkitAudioContext)();
+    function beep(f) {
+      try {
+        if (actx.state === 'suspended') actx.resume();
+        const o = actx.createOscillator();
+        const g = actx.createGain();
+        o.type = 'square';
+        o.frequency.setValueAtTime(f, actx.currentTime);
+        g.gain.setValueAtTime(0.06, actx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + 0.08);
+        o.connect(g);
+        g.connect(actx.destination);
+        o.start();
+        o.stop(actx.currentTime + 0.08);
+      } catch (e) {}
+    }
+
+    function setMode(m) {
+      mode = m;
+      btn1P.className = 'mode-btn ' + (m === '1P' ? 'active' : '');
+      btn2P.className = 'mode-btn ' + (m === '2P' ? 'active' : '');
+      tipEl.textContent = m === '1P' ? 'Player 1: W / S (or Up / Down) • First to 10 wins' : 'P1: W / S • P2: Up / Down Arrows • First to 10 wins';
+      resetGame();
+    }
+
+    function resetGame() {
+      p1Score = 0;
+      p2Score = 0;
+      resetBall();
+    }
+
+    function resetBall(direction = 1) {
+      ball.x = canvas.width / 2;
+      ball.y = canvas.height / 2;
+      ball.speed = 5;
+      const angle = (Math.random() - 0.5) * 0.8;
+      ball.vx = direction * ball.speed * Math.cos(angle);
+      ball.vy = ball.speed * Math.sin(angle);
+    }
+
+    const keys = {};
+    window.addEventListener('keydown', e => { keys[e.key] = true; });
+    window.addEventListener('keyup', e => { keys[e.key] = false; });
+
+    function update() {
+      // P1 controls
+      if (keys['w'] || keys['W'] || (mode === '1P' && keys['ArrowUp'])) p1.y -= p1.speed;
+      if (keys['s'] || keys['S'] || (mode === '1P' && keys['ArrowDown'])) p1.y += p1.speed;
+      p1.y = Math.max(0, Math.min(canvas.height - padH, p1.y));
+
+      // P2 controls or AI
+      if (mode === '2P') {
+        if (keys['ArrowUp']) p2.y -= p2.speed;
+        if (keys['ArrowDown']) p2.y += p2.speed;
+      } else {
+        // Simple smooth AI with reaction delay
+        const targetY = ball.y - padH / 2;
+        if (targetY < p2.y - 4) p2.y -= Math.min(p2.speed * 0.8, p2.y - targetY);
+        else if (targetY > p2.y + 4) p2.y += Math.min(p2.speed * 0.8, targetY - p2.y);
+      }
+      p2.y = Math.max(0, Math.min(canvas.height - padH, p2.y));
+
+      // Ball physics
+      ball.x += ball.vx;
+      ball.y += ball.vy;
+
+      // Top / Bottom bounds
+      if (ball.y - ball.r < 0) { ball.y = ball.r; ball.vy = -ball.vy; beep(300); }
+      if (ball.y + ball.r > canvas.height) { ball.y = canvas.height - ball.r; ball.vy = -ball.vy; beep(300); }
+
+      // P1 Paddle collision
+      if (
+        ball.x - ball.r <= p1.x + padW &&
+        ball.x + ball.r >= p1.x &&
+        ball.y >= p1.y &&
+        ball.y <= p1.y + padH &&
+        ball.vx < 0
+      ) {
+        const offset = (ball.y - (p1.y + padH / 2)) / (padH / 2);
+        ball.speed = Math.min(11, ball.speed + 0.3);
+        ball.vx = ball.speed * Math.cos(offset * 1.1);
+        ball.vy = ball.speed * Math.sin(offset * 1.1);
+        beep(500);
+      }
+
+      // P2 Paddle collision
+      if (
+        ball.x + ball.r >= p2.x &&
+        ball.x - ball.r <= p2.x + padW &&
+        ball.y >= p2.y &&
+        ball.y <= p2.y + padH &&
+        ball.vx > 0
+      ) {
+        const offset = (ball.y - (p2.y + padH / 2)) / (padH / 2);
+        ball.speed = Math.min(11, ball.speed + 0.3);
+        ball.vx = -ball.speed * Math.cos(offset * 1.1);
+        ball.vy = ball.speed * Math.sin(offset * 1.1);
+        beep(500);
+      }
+
+      // Goal P1 scores
+      if (ball.x > canvas.width) {
+        p1Score++;
+        beep(750);
+        if (p1Score >= 10) {
+          alert('Player 1 Wins!');
+          resetGame();
+        } else {
+          resetBall(-1);
+        }
+      }
+
+      // Goal P2 scores
+      if (ball.x < 0) {
+        p2Score++;
+        beep(200);
+        if (p2Score >= 10) {
+          alert(mode === '1P' ? 'Computer Wins!' : 'Player 2 Wins!');
+          resetGame();
+        } else {
+          resetBall(1);
+        }
+      }
+    }
+
+    function draw() {
+      ctx.fillStyle = '#020617';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Center dashed net line
+      ctx.strokeStyle = '#334155';
+      ctx.setLineDash([8, 8]);
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(canvas.width / 2, 0);
+      ctx.lineTo(canvas.width / 2, canvas.height);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Scores
+      ctx.fillStyle = '#64748b';
+      ctx.font = 'bold 48px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(p1Score, canvas.width / 2 - 70, 60);
+      ctx.fillText(p2Score, canvas.width / 2 + 70, 60);
+
+      // Paddles
+      ctx.fillStyle = '#38bdf8';
+      ctx.fillRect(p1.x, p1.y, padW, padH);
+      ctx.fillStyle = '#a855f7';
+      ctx.fillRect(p2.x, p2.y, padW, padH);
+
+      // Ball
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(ball.x - ball.r, ball.y - ball.r, ball.r * 2, ball.r * 2);
+    }
+
+    function loop() {
+      update();
+      draw();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
