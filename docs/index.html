@@ -9,8 +9,8 @@
     <meta property="og:description" content="A fast, ad-free unblocked games portal featuring playable web games stored via iframes in JSON, category filters, tab cloaking, fullscreen mode, and custom game library management." />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
-    <script type="module" crossorigin src="./assets/index-Dxyp14eS.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-Cke5g-iW.css">
+    <script type="module" crossorigin src="./assets/app.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/app.css">
   </head>
   <body>
     <div id="root">
@@ -20,14 +20,28 @@
         <p id="portal-status" style="font-size: 13px; color: #94a3b8; margin: 0;">Loading game arcade...</p>
       </div>
     </div>
+    <!-- Vite development entry point -->
+    <!-- Production static fallback (runs if served directly on GitHub Pages without Vite) -->
     <script>
-      // Fallback detector if raw source index.html is served directly on GitHub Pages without build
-      window.addEventListener('error', function(e) {
-        var status = document.getElementById('portal-status');
-        if (status && (e.message || '').includes('Failed to resolve module specifier')) {
-          status.innerHTML = '<span style="color: #f43f5e; font-weight: 600;">GitHub Pages Setup Notice:</span><br/><span style="color: #cbd5e1; font-size: 12px; display: inline-block; margin-top: 6px;">Please set GitHub Pages Source to <b>GitHub Actions</b> or select the <b>/docs</b> folder in repo settings.</span>';
+      setTimeout(function() {
+        if (!window.__nova_arcade_mounted__) {
+          var status = document.getElementById('portal-status');
+          if (status) status.innerText = 'Initializing portal assets...';
+          
+          var cssLink = document.querySelector('link[href*="app.css"]');
+          if (!cssLink) {
+            var link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = './assets/app.css';
+            document.head.appendChild(link);
+          }
+
+          var script = document.createElement('script');
+          script.type = 'module';
+          script.src = './assets/app.js';
+          document.head.appendChild(script);
         }
-      });
+      }, 50);
     </script>
   </body>
 </html>
