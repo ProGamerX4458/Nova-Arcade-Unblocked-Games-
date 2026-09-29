@@ -64,7 +64,18 @@ export function applyTabCloak(presetId) {
  */
 export function openGameInNewTab(url, title = 'Nova Arcade', htmlContent = null) {
   try {
-    const gameUrl = url ? (url.startsWith('http') ? url : window.location.origin + url) : '';
+    let gameUrl = '';
+    if (url) {
+      if (url.startsWith('http://') || url.startsWith('https://')) {
+        gameUrl = url;
+      } else {
+        try {
+          gameUrl = new URL(url, window.location.href).href;
+        } catch {
+          gameUrl = window.location.origin + url;
+        }
+      }
+    }
 
     // Open clean about:blank window
     let win = null;

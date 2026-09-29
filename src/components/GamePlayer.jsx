@@ -38,7 +38,10 @@ export const GamePlayer = ({
   useEffect(() => {
     setInlineHtml(game.htmlContent || null);
     if (!game.htmlContent && game.iframeUrl && game.iframeUrl.startsWith('/')) {
-      fetch(game.iframeUrl)
+      const base = (import.meta.env.BASE_URL || './').replace(/\/$/, '');
+      const resolved = `${base}${game.iframeUrl}`;
+      fetch(resolved)
+        .catch(() => fetch(`.${game.iframeUrl}`))
         .then(res => res.text())
         .then(text => {
           if (text && text.includes('<html')) {
@@ -211,7 +214,7 @@ export const GamePlayer = ({
             key={reloadKey}
             id={game.frameId || "sandboxFrame"}
             ref={iframeRef}
-            src={inlineHtml ? undefined : game.iframeUrl}
+            src={inlineHtml ? undefined : ((game.iframeUrl && game.iframeUrl.startsWith('/')) ? `${(import.meta.env.BASE_URL || './').replace(/\/$/, '')}${game.iframeUrl}` : game.iframeUrl)}
             srcDoc={inlineHtml || undefined}
             title={game.title}
             className="w-full h-full border-0 select-none"

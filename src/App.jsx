@@ -26,8 +26,15 @@ export default function App() {
     const loadGames = async () => {
       let baseGames = DEFAULT_GAMES;
       try {
-        const res = await fetch('/games.json');
-        if (res.ok) {
+        const base = import.meta.env.BASE_URL || './';
+        const url = `${base.replace(/\/$/, '')}/games.json`;
+        let res = null;
+        try {
+          res = await fetch(url);
+        } catch {
+          res = await fetch('./games.json').catch(() => null);
+        }
+        if (res && res.ok) {
           const json = await res.json();
           if (Array.isArray(json)) {
             baseGames = json.map(g => {

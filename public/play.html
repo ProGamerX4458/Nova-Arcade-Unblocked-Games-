@@ -136,13 +136,17 @@
 
     function applyUrl(url) {
       if (!url) return;
+      if (url.startsWith('/games/')) {
+        url = '.' + url;
+      }
       frame.src = url;
     }
 
     // Function to load the game into the iframe
     function loadGame() {
       if (gameId) {
-        fetch('/games.json')
+        fetch('./games.json')
+          .catch(() => fetch('/games.json'))
           .then(r => r.json())
           .then(games => {
             const match = games.find(g => g.id === gameId);
