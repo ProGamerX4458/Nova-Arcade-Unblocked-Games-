@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>T-Rex Runner - Nova Arcade</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #090d16;
+      color: #cbd5e1;
+      font-family: 'Press Start 2P', monospace, system-ui, -apple-system, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    #game-container {
+      position: relative;
+      width: 100%;
+      max-width: 800px;
+      height: 320px;
+      margin: 0 auto;
+      background: #f7f9fa;
+      border-radius: 14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 20px rgba(56,189,248,0.15);
+      overflow: hidden;
+      border: 2px solid #1e293b;
+      transition: background 0.4s ease, border-color 0.4s ease;
+    }
+    #game-container.night {
+      background: #111827;
+      border-color: #38bdf8;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.7), 0 0 25px rgba(56,189,248,0.25);
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      image-rendering: pixelated;
+    }
+    /* Controls and Info Bar */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      max-width: 800px;
+      margin-top: 14px;
+      padding: 0 8px;
+      font-size: 11px;
+      color: #94a3b8;
+    }
+    .badge {
+      background: #1e293b;
+      color: #38bdf8;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      border: 1px solid #334155;
+    }
+    .btn {
+      background: #1e293b;
+      color: #e2e8f0;
+      border: 1px solid #334155;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+    .btn:hover {
+      background: #0284c7;
+      color: #fff;
+      border-color: #38bdf8;
+    }
+    /* Mobile / Touch bar */
+    .touch-bar {
+      display: none;
+      width: 100%;
+      max-width: 800px;
+      margin-top: 10px;
+      gap: 10px;
+      padding: 0 8px;
+    }
+    @media (max-width: 768px), (pointer: coarse) {
+      .touch-bar {
+        display: flex;
+      }
+    }
+    .touch-btn {
+      flex: 1;
+      height: 48px;
+      background: #1e293b;
+      color: #38bdf8;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      active:scale-95;
+    }
+    .touch-btn:active {
+      background: #0284c7;
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="game-container">
+    <canvas id="canvas" width="800" height="320"></canvas>
+  </div>
+
+  <div class="toolbar">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span class="badge">T-REX RUNNER</span>
+      <span style="display: inline-block;">Space/↑ Jump • ↓ Duck • P Pause</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <button class="btn" id="soundBtn" title="Toggle Sound">🔊 Audio: ON</button>
+      <button class="btn" id="themeBtn" title="Toggle Day/Night Mode">🌙 Night</button>
+    </div>
+  </div>
+
+  <div class="touch-bar">
+    <button class="touch-btn" id="touchDuck">▼ DUCK</button>
+    <button class="touch-btn" id="touchJump">▲ JUMP</button>
+  </div>
+
+  <script>
+    // --- Web Audio Synth Sound Effects (Zero External Files Required) ---
+    let audioEnabled = true;
+    let audioCtx = null;
+    function getAudioCtx() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      return audioCtx;
+    }
+
+    function playSound(type) {
+      if (!audioEnabled) return;
+      try {
+        const ctx = getAudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        const now = ctx.currentTime;
+
+        if (type === 'jump') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(300, now);
+          osc.frequency.exponentialRampToValueAtTime(700, now + 0.12);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+          osc.start(now);
+          osc.stop(now + 0.13);
+        } else if (type === 'score') {
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(800, now);
+          osc.frequency.setValueAtTime(1000, now + 0.08);
+          gain.gain.setValueAtTime(0.18, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+          osc.start(now);
+          osc.stop(now + 0.26);
+        } else if (type === 'die') {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(260, now);
+          osc.frequency.exponentialRampToValueAtTime(80, now + 0.25);
+          gain.gain.setValueAtTime(0.25, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+          osc.start(now);
+          osc.stop(now + 0.26);
+        }
+      } catch (e) {}
+    }
+
+    // --- Canvas & Core Setup ---
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const container = document.getElementById('game-container');
+
+    const WIDTH = 800;
+    const HEIGHT = 320;
+    const GROUND_Y = 260;
+
+    let isNight = false;
+    let autoNight = true;
+
+    // Game States
+    const STATE_IDLE = 0;
+    const STATE_RUNNING = 1;
+    const STATE_GAMEOVER = 2;
+    const STATE_PAUSED = 3;
+
+    let gameState = STATE_IDLE;
+    let score = 0;
+    let bestScore = parseInt(localStorage.getItem('nova_trex_high_score') || '0', 10);
+    let scoreBlink = 0;
+    let speed = 7.5;
+    let minObstacleDist = 280;
+    let lastObstacleX = 0;
+
+    // Particles for dust puffs
+    let particles = [];
+
+    // --- Pixel Sprite Bitmaps ---
+    // Color palettes
+    function getPalette() {
+      return isNight 
+        ? { primary: '#f1f5f9', secondary: '#94a3b8', ground: '#475569', eye: '#111827' }
+        : { primary: '#535353', secondary: '#8c8c8c', ground: '#a3a3a3', eye: '#ffffff' };
+    }
+
+    // Drawing Helper: Pixel grid renderer
+    function drawPixelMatrix(ctx, matrix, x, y, size = 2, color = '#535353') {
+      ctx.fillStyle = color;
+      for (let r = 0; r < matrix.length; r++) {
+        const row = matrix[r];
+        for (let c = 0; c < row.length; c++) {
+          if (row[c] === 1) {
+            ctx.fillRect(x + c * size, y + r * size, size, size);
+          }
+        }
+      }
+    }
+
+    // --- T-Rex Character Entity ---
+    const dino = {
+      x: 50,
+      y: GROUND_Y - 47,
+      width: 44,
+      height: 47,
+      vy: 0,
+      jumpForce: -12.5,
+      gravity: 0.65,
+      grounded: true,
+      ducking: false,
+      stepTimer: 0,
+      legFrame: 0,
+
+      reset() {
+        this.x = 50;
+        this.y = GROUND_Y - 47;
+        this.width = 44;
+        this.height = 47;
+        this.vy = 0;
+        this.grounded = true;
+        this.ducking = false;
+        this.stepTimer = 0;
+        this.legFrame = 0;
+      },
+
+      jump() {
+        if (this.grounded && !this.ducking) {
+          this.vy = this.jumpForce;
+          this.grounded = false;
+          playSound('jump');
+          createDust(this.x + 10, GROUND_Y);
+        }
+      },
+
+      setDucking(val) {
+        if (val) {
+          this.ducking = true;
+          this.height = 30;
+          if (this.grounded) {
+            this.y = GROUND_Y - 30;
+          } else {
+            // Fast fall
+            this.vy += 3.5;
+          }
+        } else {
+          this.ducking = false;
+          this.height = 47;
+          if (this.grounded) {
+            this.y = GROUND_Y - 47;
+          }
+        }
+      },
+
+      update() {
+        if (!this.grounded) {
+          this.vy += this.gravity;
+          this.y += this.vy;
+
+          const targetGround = this.ducking ? (GROUND_Y - 30) : (GROUND_Y - 47);
+          if (this.y >= targetGround) {
+            this.y = targetGround;
+            this.vy = 0;
+            this.grounded = true;
+            createDust(this.x + 12, GROUND_Y);
+          }
+        }
+
+        // Running animation frames
+        this.stepTimer += speed * 0.05;
+        if (this.stepTimer >= 1) {
+          this.stepTimer = 0;
+          this.legFrame = (this.legFrame + 1) % 2;
+          if (this.grounded && Math.random() < 0.25) {
+            createDust(this.x + 6, GROUND_Y);
+          }
+        }
+      },
+
+      draw(ctx) {
+        const pal = getPalette();
+        ctx.save();
+
+        if (this.ducking) {
+          // --- Ducking T-Rex ---
+          ctx.fillStyle = pal.primary;
+          const dx = this.x;
+          const dy = this.y;
+
+          // Low body
+          ctx.fillRect(dx + 2, dy + 8, 48, 16);
+          // Tail
+          ctx.fillRect(dx, dy + 4, 10, 8);
+          // Ducking Head
+          ctx.fillRect(dx + 38, dy, 20, 16);
+          ctx.fillRect(dx + 44, dy + 8, 15, 8);
+          // Eye
+          ctx.fillStyle = pal.eye;
+          ctx.fillRect(dx + 44, dy + 3, 3, 3);
+
+          // Legs in duck
+          ctx.fillStyle = pal.primary;
+          if (this.legFrame === 0) {
+            ctx.fillRect(dx + 20, dy + 24, 4, 6);
+            ctx.fillRect(dx + 20, dy + 28, 7, 2);
+            ctx.fillRect(dx + 34, dy + 24, 4, 4);
+          } else {
+            ctx.fillRect(dx + 20, dy + 24, 4, 4);
+            ctx.fillRect(dx + 34, dy + 24, 4, 6);
+            ctx.fillRect(dx + 34, dy + 28, 7, 2);
+          }
+        } else {
+          // --- Standing / Running T-Rex ---
+          const dx = this.x;
+          const dy = this.y;
+          ctx.fillStyle = pal.primary;
+
+          // Head & Snout
+          ctx.fillRect(dx + 22, dy, 22, 16);
+          ctx.fillRect(dx + 28, dy + 8, 16, 10);
+          ctx.fillRect(dx + 22, dy + 16, 12, 4);
+
+          // Eye
+          if (gameState === STATE_GAMEOVER) {
+            // Dead Eye (X)
+            ctx.fillStyle = pal.eye;
+            ctx.fillRect(dx + 28, dy + 4, 5, 5);
+            ctx.fillStyle = pal.primary;
+            ctx.fillRect(dx + 29, dy + 5, 3, 3);
+          } else {
+            ctx.fillStyle = pal.eye;
+            ctx.fillRect(dx + 28, dy + 3, 4, 4);
+          }
+
+          // Body & Torso
+          ctx.fillStyle = pal.primary;
+          ctx.fillRect(dx + 12, dy + 16, 16, 18);
+          ctx.fillRect(dx + 8, dy + 20, 8, 14);
+
+          // Tail
+          ctx.fillRect(dx + 4, dy + 22, 6, 8);
+          ctx.fillRect(dx, dy + 24, 4, 6);
+
+          // Tiny Arms
+          ctx.fillRect(dx + 28, dy + 18, 6, 3);
+          ctx.fillRect(dx + 32, dy + 21, 2, 4);
+
+          // Legs
+          if (!this.grounded) {
+            // Mid-air jump pose (legs tucked)
+            ctx.fillRect(dx + 14, dy + 34, 4, 8);
+            ctx.fillRect(dx + 14, dy + 40, 7, 3);
+            ctx.fillRect(dx + 22, dy + 34, 4, 8);
+            ctx.fillRect(dx + 22, dy + 40, 7, 3);
+          } else if (gameState === STATE_IDLE || gameState === STATE_GAMEOVER) {
+            // Standing pose
+            ctx.fillRect(dx + 14, dy + 34, 4, 11);
+            ctx.fillRect(dx + 14, dy + 43, 7, 4);
+            ctx.fillRect(dx + 22, dy + 34, 4, 11);
+            ctx.fillRect(dx + 22, dy + 43, 7, 4);
+          } else {
+            // Running leg animation
+            if (this.legFrame === 0) {
+              ctx.fillRect(dx + 14, dy + 34, 4, 12);
+              ctx.fillRect(dx + 14, dy + 44, 7, 3);
+              ctx.fillRect(dx + 22, dy + 34, 4, 6);
+              ctx.fillRect(dx + 24, dy + 38, 5, 4);
+            } else {
+              ctx.fillRect(dx + 14, dy + 34, 4, 6);
+              ctx.fillRect(dx + 12, dy + 38, 5, 4);
+              ctx.fillRect(dx + 22, dy + 34, 4, 12);
+              ctx.fillRect(dx + 22, dy + 44, 7, 3);
+            }
+          }
+        }
+        ctx.restore();
+      }
+    };
+
+    // --- Environment: Clouds & Stars ---
+    let clouds = [
+      { x: 150, y: 70, speed: 0.8 },
+      { x: 420, y: 50, speed: 0.6 },
+      { x: 680, y: 90, speed: 1.0 }
+    ];
+
+    let stars = [];
+    for (let i = 0; i < 18; i++) {
+      stars.push({
+        x: Math.random() * WIDTH,
+        y: Math.random() * 120 + 20,
+        size: Math.random() < 0.3 ? 2 : 1,
+        twinkle: Math.random() * 10
+      });
+    }
+
+    function drawCloud(ctx, x, y) {
+      const pal = getPalette();
+      ctx.fillStyle = pal.secondary;
+      ctx.fillRect(x + 14, y, 20, 6);
+      ctx.fillRect(x + 6, y + 4, 34, 8);
+      ctx.fillRect(x, y + 8, 46, 6);
+    }
+
+    function drawMoon(ctx, x, y) {
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(x + 4, y, 16, 24);
+      ctx.fillRect(x, y + 4, 24, 16);
+      ctx.fillStyle = '#111827';
+      ctx.fillRect(x + 10, y + 2, 14, 20);
+      ctx.fillRect(x + 6, y + 6, 20, 12);
+    }
+
+    // --- Obstacles: Cacti & Pterodactyls ---
+    let obstacles = [];
+
+    class Obstacle {
+      constructor(type, x) {
+        this.x = x;
+        this.type = type; // 'small_cacti', 'large_cacti', 'pterodactyl'
+        this.passed = false;
+
+        if (this.type === 'small_cacti') {
+          this.variant = Math.floor(Math.random() * 3) + 1; // 1, 2, or 3 cacti
+          this.width = this.variant * 16;
+          this.height = 36;
+          this.y = GROUND_Y - this.height;
+        } else if (this.type === 'large_cacti') {
+          this.variant = Math.floor(Math.random() * 2) + 1; // 1 or 2 big cacti
+          this.width = this.variant * 24;
+          this.height = 48;
+          this.y = GROUND_Y - this.height;
+        } else if (this.type === 'pterodactyl') {
+          this.width = 44;
+          this.height = 30;
+          this.frame = 0;
+          this.frameTimer = 0;
+          // 3 heights: low (must jump), mid (must duck), high (can run under)
+          const heights = [GROUND_Y - 26, GROUND_Y - 48, GROUND_Y - 72];
+          this.y = heights[Math.floor(Math.random() * heights.length)];
+        }
+      }
+
+      update() {
+        this.x -= speed;
+        if (this.type === 'pterodactyl') {
+          this.frameTimer += 0.15;
+          if (this.frameTimer >= 1) {
+            this.frameTimer = 0;
+            this.frame = (this.frame + 1) % 2;
+          }
+        }
+      }
+
+      draw(ctx) {
+        const pal = getPalette();
+        ctx.save();
+        ctx.fillStyle = pal.primary;
+
+        if (this.type === 'small_cacti') {
+          for (let i = 0; i < this.variant; i++) {
+            const cx = this.x + i * 16;
+            const cy = this.y;
+            // Main stem
+            ctx.fillRect(cx + 5, cy, 6, 36);
+            // Left arm
+            ctx.fillRect(cx + 1, cy + 8, 4, 4);
+            ctx.fillRect(cx + 1, cy + 6, 3, 10);
+            // Right arm
+            ctx.fillRect(cx + 11, cy + 12, 4, 4);
+            ctx.fillRect(cx + 12, cy + 8, 3, 12);
+          }
+        } else if (this.type === 'large_cacti') {
+          for (let i = 0; i < this.variant; i++) {
+            const cx = this.x + i * 24;
+            const cy = this.y;
+            // Main stem
+            ctx.fillRect(cx + 8, cy, 8, 48);
+            // Left arm
+            ctx.fillRect(cx + 2, cy + 12, 6, 6);
+            ctx.fillRect(cx + 2, cy + 8, 4, 16);
+            // Right arm
+            ctx.fillRect(cx + 16, cy + 18, 6, 6);
+            ctx.fillRect(cx + 18, cy + 12, 4, 20);
+          }
+        } else if (this.type === 'pterodactyl') {
+          const px = this.x;
+          const py = this.y;
+          // Body & beak
+          ctx.fillRect(px + 12, py + 10, 20, 8);
+          ctx.fillRect(px + 4, py + 12, 10, 4);
+          ctx.fillRect(px, py + 13, 5, 2); // beak tip
+          // Head crest
+          ctx.fillRect(px + 16, py + 6, 8, 6);
+
+          // Eye
+          ctx.fillStyle = pal.eye;
+          ctx.fillRect(px + 10, py + 11, 2, 2);
+          ctx.fillStyle = pal.primary;
+
+          if (this.frame === 0) {
+            // Wings Up
+            ctx.fillRect(px + 16, py, 6, 12);
+            ctx.fillRect(px + 20, py + 2, 8, 10);
+            ctx.fillRect(px + 24, py + 6, 6, 8);
+          } else {
+            // Wings Down
+            ctx.fillRect(px + 16, py + 16, 6, 12);
+            ctx.fillRect(px + 20, py + 14, 8, 10);
+            ctx.fillRect(px + 24, py + 12, 6, 8);
+          }
+        }
+        ctx.restore();
+      }
+
+      getHitbox() {
+        // Generous padding for fair arcade gameplay
+        return {
+          x: this.x + 4,
+          y: this.y + 4,
+          width: this.width - 8,
+          height: this.height - 6
+        };
+      }
+    }
+
+    // --- Particle Dust ---
+    function createDust(x, y) {
+      for (let i = 0; i < 3; i++) {
+        particles.push({
+          x: x + (Math.random() * 6 - 3),
+          y: y - (Math.random() * 4),
+          vx: -(Math.random() * 2 + 1),
+          vy: -(Math.random() * 1.5),
+          size: Math.random() < 0.5 ? 3 : 2,
+          life: 1.0
+        });
+      }
+    }
+
+    // --- Ground Texture Dots ---
+    let groundOffset = 0;
+    const groundDetails = [];
+    for (let x = 0; x < WIDTH * 2; x += 15 + Math.random() * 30) {
+      groundDetails.push({
+        x: x,
+        y: GROUND_Y + 4 + Math.random() * 18,
+        length: Math.random() < 0.4 ? 4 : 2
+      });
+    }
+
+    // --- Collision Detection ---
+    function checkCollision(dino, obstacle) {
+      const b1 = {
+        x: dino.x + 6,
+        y: dino.y + (dino.ducking ? 4 : 2),
+        width: dino.width - 12,
+        height: dino.height - (dino.ducking ? 6 : 4)
+      };
+      const b2 = obstacle.getHitbox();
+
+      return (
+        b1.x < b2.x + b2.width &&
+        b1.x + b1.width > b2.x &&
+        b1.y < b2.y + b2.height &&
+        b1.y + b1.height > b2.y
+      );
+    }
+
+    // --- Spawner Logic ---
+    function spawnObstacle() {
+      // Minimum distance between obstacles scales dynamically
+      const distanceNeeded = minObstacleDist + Math.random() * 220;
+      if (WIDTH - lastObstacleX < distanceNeeded) return;
+
+      let type = 'small_cacti';
+      const r = Math.random();
+
+      // Pterodactyls only appear after 300 points
+      if (score >= 300 && r > 0.65) {
+        type = 'pterodactyl';
+      } else if (r > 0.35) {
+        type = 'large_cacti';
+      }
+
+      obstacles.push(new Obstacle(type, WIDTH + 20));
+      lastObstacleX = WIDTH + 20;
+    }
+
+    // --- Game Reset / Start ---
+    function startGame() {
+      gameState = STATE_RUNNING;
+      score = 0;
+      speed = 7.5;
+      scoreBlink = 0;
+      obstacles = [];
+      particles = [];
+      lastObstacleX = 0;
+      dino.reset();
+      if (autoNight) setNight(false);
+    }
+
+    function gameOver() {
+      gameState = STATE_GAMEOVER;
+      playSound('die');
+      if (score > bestScore) {
+        bestScore = Math.floor(score);
+        localStorage.setItem('nova_trex_high_score', bestScore.toString());
+      }
+    }
+
+    function setNight(val) {
+      isNight = val;
+      if (isNight) {
+        container.classList.add('night');
+        document.getElementById('themeBtn').innerText = '☀️ Day';
+      } else {
+        container.classList.remove('night');
+        document.getElementById('themeBtn').innerText = '🌙 Night';
+      }
+    }
+
+    // --- Main Update Loop ---
+    let lastTime = performance.now();
+
+    function update(dt) {
+      if (gameState === STATE_RUNNING) {
+        // Increase score
+        const prev100 = Math.floor(score / 100);
+        score += dt * 0.015 * (speed / 7.5);
+        const curr100 = Math.floor(score / 100);
+
+        // Every 100 points: flash effect and chime
+        if (curr100 > prev100 && curr100 > 0) {
+          playSound('score');
+          scoreBlink = 30; // blink frames
+        }
+
+        // Auto Day/Night transition every 700 points
+        if (autoNight) {
+          const cycle = Math.floor(score / 700);
+          const shouldBeNight = (cycle % 2 === 1);
+          if (shouldBeNight !== isNight) {
+            setNight(shouldBeNight);
+          }
+        }
+
+        // Speed curve
+        speed = 7.5 + Math.min(score * 0.006, 9.0);
+        minObstacleDist = 200 + speed * 12;
+
+        // Ground scroll
+        groundOffset = (groundOffset + speed) % WIDTH;
+
+        // Update Dino
+        dino.update();
+
+        // Update Clouds
+        clouds.forEach(c => {
+          c.x -= c.speed;
+          if (c.x < -60) c.x = WIDTH + 40;
+        });
+
+        // Spawn & Update Obstacles
+        spawnObstacle();
+        lastObstacleX -= speed;
+
+        for (let i = obstacles.length - 1; i >= 0; i--) {
+          const obs = obstacles[i];
+          obs.update();
+
+          // Collision check
+          if (checkCollision(dino, obs)) {
+            gameOver();
+            break;
+          }
+
+          if (obs.x + obs.width < -30) {
+            obstacles.splice(i, 1);
+          }
+        }
+
+        // Update Particles
+        for (let i = particles.length - 1; i >= 0; i--) {
+          const p = particles[i];
+          p.x += p.vx;
+          p.y += p.vy;
+          p.life -= 0.06;
+          if (p.life <= 0) particles.splice(i, 1);
+        }
+      }
+    }
+
+    // --- Draw Loop ---
+    function draw() {
+      const pal = getPalette();
+
+      // Clear Canvas
+      ctx.clearRect(0, 0, WIDTH, HEIGHT);
+
+      // Night Stars & Moon
+      if (isNight) {
+        drawMoon(ctx, WIDTH - 120, 40);
+        ctx.fillStyle = '#94a3b8';
+        stars.forEach(s => {
+          ctx.fillRect(s.x, s.y, s.size, s.size);
+        });
+      }
+
+      // Draw Clouds
+      clouds.forEach(c => {
+        drawCloud(ctx, c.x, c.y);
+      });
+
+      // Draw Ground Horizon Line
+      ctx.fillStyle = pal.ground;
+      ctx.fillRect(0, GROUND_Y, WIDTH, 2);
+
+      // Draw Ground pebbles
+      groundDetails.forEach(g => {
+        const renderX = (g.x - groundOffset + WIDTH * 2) % WIDTH;
+        ctx.fillRect(renderX, g.y, g.length, 1.5);
+      });
+
+      // Draw Particles
+      particles.forEach(p => {
+        ctx.fillStyle = pal.secondary;
+        ctx.globalAlpha = p.life;
+        ctx.fillRect(p.x, p.y, p.size, p.size);
+        ctx.globalAlpha = 1.0;
+      });
+
+      // Draw Obstacles
+      obstacles.forEach(obs => {
+        obs.draw(ctx);
+      });
+
+      // Draw Dino
+      dino.draw(ctx);
+
+      // Draw HUD Score
+      ctx.save();
+      ctx.font = '16px monospace';
+      ctx.textAlign = 'right';
+
+      const padScore = Math.floor(score).toString().padStart(5, '0');
+      const padBest = bestScore.toString().padStart(5, '0');
+
+      if (bestScore > 0) {
+        ctx.fillStyle = pal.secondary;
+        ctx.fillText(`HI ${padBest}  `, WIDTH - 90, 36);
+      }
+
+      // Blinking score on 100pt milestones
+      if (scoreBlink > 0) {
+        scoreBlink--;
+        if (Math.floor(scoreBlink / 4) % 2 === 0) {
+          ctx.fillStyle = '#38bdf8';
+          ctx.fillText(padScore, WIDTH - 20, 36);
+        }
+      } else {
+        ctx.fillStyle = pal.primary;
+        ctx.fillText(padScore, WIDTH - 20, 36);
+      }
+      ctx.restore();
+
+      // --- Overlays: Idle & Game Over ---
+      if (gameState === STATE_IDLE) {
+        ctx.save();
+        ctx.fillStyle = pal.primary;
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 18px monospace';
+        ctx.fillText('PRESS SPACE OR JUMP TO START', WIDTH / 2, HEIGHT / 2 - 10);
+        ctx.font = '13px monospace';
+        ctx.fillStyle = pal.secondary;
+        ctx.fillText('DODGE CACTI & PTERODACTYLS • SPEED INCREASES OVER TIME', WIDTH / 2, HEIGHT / 2 + 18);
+        ctx.restore();
+      } else if (gameState === STATE_GAMEOVER) {
+        ctx.save();
+        ctx.fillStyle = pal.primary;
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 24px monospace';
+        ctx.fillText('G A M E   O V E R', WIDTH / 2, HEIGHT / 2 - 20);
+
+        // Restart Icon / Button
+        ctx.fillStyle = '#38bdf8';
+        ctx.font = 'bold 14px monospace';
+        ctx.fillText('[ PRESS SPACE OR TAP TO RESTART ]', WIDTH / 2, HEIGHT / 2 + 18);
+        ctx.restore();
+      } else if (gameState === STATE_PAUSED) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(0,0,0,0.4)';
+        ctx.fillRect(0, 0, WIDTH, HEIGHT);
+        ctx.fillStyle = '#38bdf8';
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 24px monospace';
+        ctx.fillText('P A U S E D', WIDTH / 2, HEIGHT / 2);
+        ctx.font = '13px monospace';
+        ctx.fillStyle = '#cbd5e1';
+        ctx.fillText('Press P or Space to Resume', WIDTH / 2, HEIGHT / 2 + 30);
+        ctx.restore();
+      }
+    }
+
+    // --- Main Game Loop ---
+    function loop(time) {
+      const dt = Math.min(time - lastTime, 50);
+      lastTime = time;
+
+      update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+
+    // --- Input Handlers ---
+    function handleActionJump() {
+      if (gameState === STATE_IDLE || gameState === STATE_GAMEOVER) {
+        startGame();
+        dino.jump();
+      } else if (gameState === STATE_RUNNING) {
+        dino.jump();
+      } else if (gameState === STATE_PAUSED) {
+        gameState = STATE_RUNNING;
+      }
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' || e.code === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
+        e.preventDefault();
+        handleActionJump();
+      } else if (e.code === 'ArrowDown' || e.key === 's' || e.key === 'S') {
+        e.preventDefault();
+        if (gameState === STATE_RUNNING) {
+          dino.setDucking(true);
+        }
+      } else if (e.code === 'KeyP' || e.code === 'Escape') {
+        e.preventDefault();
+        if (gameState === STATE_RUNNING) {
+          gameState = STATE_PAUSED;
+        } else if (gameState === STATE_PAUSED) {
+          gameState = STATE_RUNNING;
+        }
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      if (e.code === 'ArrowDown' || e.key === 's' || e.key === 'S') {
+        dino.setDucking(false);
+      }
+    });
+
+    // Canvas click / tap
+    canvas.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      handleActionJump();
+    });
+
+    // Touch bar buttons
+    const touchJump = document.getElementById('touchJump');
+    const touchDuck = document.getElementById('touchDuck');
+
+    touchJump.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      handleActionJump();
+    });
+
+    touchDuck.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      if (gameState === STATE_RUNNING) dino.setDucking(true);
+    });
+
+    touchDuck.addEventListener('pointerup', (e) => {
+      e.preventDefault();
+      dino.setDucking(false);
+    });
+    touchDuck.addEventListener('pointercancel', (e) => {
+      e.preventDefault();
+      dino.setDucking(false);
+    });
+
+    // Toolbar Controls
+    const soundBtn = document.getElementById('soundBtn');
+    soundBtn.addEventListener('click', () => {
+      audioEnabled = !audioEnabled;
+      soundBtn.innerText = audioEnabled ? '🔊 Audio: ON' : '🔇 Audio: OFF';
+    });
+
+    const themeBtn = document.getElementById('themeBtn');
+    themeBtn.addEventListener('click', () => {
+      autoNight = false; // user override
+      setNight(!isNight);
+    });
+  </script>
+</body>
+</html>

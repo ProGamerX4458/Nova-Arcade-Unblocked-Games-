@@ -1,0 +1,149 @@
+/**
+ * Default games catalog for Nova Arcade
+ * All games run directly inside sandboxed iframes without ads or external blockers.
+ */
+
+export const DEFAULT_GAMES = [
+  {
+    id: "t-rex-runner",
+    title: "T-Rex Runner (Chrome Dino)",
+    category: "Arcade",
+    description: "Custom built retro endless runner! Guide the pixel T-Rex through the desert, jump over single/double/triple cacti, duck under flying pterodactyls, trigger dynamic day/night cycles, and beat your high score.",
+    featured: true,
+    rating: 4.9,
+    plays: 4120800,
+    badge: "NOVA ORIGINAL",
+    icon: "🦖",
+    bgGradient: "linear-gradient(135deg, #0284c7, #0f172a)",
+    themeColor: "#38bdf8",
+    tags: ["arcade", "runner", "retro", "endless", "pixel", "dino"],
+    iframeUrl: "/games/dino.html",
+    controls: [
+      "Spacebar / Up Arrow / W to jump (tap or hold for height control)",
+      "Down Arrow / S to duck under high pterodactyls or fast-drop in mid-air",
+      "P or Esc to pause / resume game",
+      "Night mode cycles dynamically every 700 points with audio effects"
+    ]
+  },
+  {
+    id: "pacman",
+    title: "Pac-Man Canvas",
+    category: "Retro",
+    description: "The immortal arcade classic lovingly recreated in HTML5. Navigate the maze, gobble up pellets, and evade the ghosts Blinky, Pinky, Inky, and Clyde.",
+    featured: true,
+    rating: 4.9,
+    plays: 5120300,
+    badge: "CLASSIC",
+    icon: "🟡",
+    bgGradient: "linear-gradient(135deg, #1e1b4b, #312e81)",
+    themeColor: "#eab308",
+    tags: ["retro", "arcade", "maze", "classic"],
+    iframeUrl: "https://pacman.platzh1rsch.ch/",
+    controls: [
+      "Arrow Keys / WASD to steer Pac-Man through the maze",
+      "Collect all dots on the board to advance to the next stage",
+      "Eat large Power Pellets to temporarily hunt and eat ghosts"
+    ]
+  },
+  {
+    id: "retro-snake",
+    title: "Retro Snake",
+    category: "Retro",
+    description: "The timeless retro arcade snake game. Gobble glowing neon apples, grow in length, and test your reaction time without colliding with walls or your tail.",
+    featured: false,
+    rating: 4.8,
+    plays: 2180000,
+    badge: "RETRO",
+    icon: "🐍",
+    bgGradient: "linear-gradient(135deg, #064e3b, #022c22)",
+    themeColor: "#10b981",
+    tags: ["retro", "snake", "arcade", "classic"],
+    iframeUrl: "/games/snake.html",
+    controls: [
+      "Arrow Keys / WASD to steer the snake",
+      "Eat red apples to score points and increase length",
+      "Spacebar to pause or resume play"
+    ]
+  },
+  {
+    id: "clumsy-bird",
+    title: "Clumsy Bird",
+    category: "Arcade",
+    description: "Our custom recreation of the one-button flapping sensation! Flap your wings, weave through classic pipe gaps, unlock bronze to platinum medals, and beat your best score.",
+    featured: true,
+    rating: 4.8,
+    plays: 2350000,
+    badge: "NOVA ORIGINAL",
+    icon: "🐦",
+    bgGradient: "linear-gradient(135deg, #0284c7, #0369a1)",
+    themeColor: "#38bdf8",
+    tags: ["arcade", "flappy", "timing", "casual", "bird"],
+    iframeUrl: "/games/clumsy-bird.html",
+    controls: [
+      "Click, Tap, or Spacebar / Up Arrow to flap your bird's wings",
+      "Carefully time your flaps to thread the needle through pipe obstacles",
+      "Earn Bronze (5), Silver (10), Gold (25), or Platinum (40+) medals",
+      "P or Esc to pause / resume game"
+    ]
+  },
+  {
+    id: "neon-breakout",
+    title: "Neon Brick Breaker",
+    category: "Arcade",
+    description: "Explosive arcade brick-shattering action featuring dazzling neon particle bursts, power rebounds, dynamic levels, and synthesized audio.",
+    featured: false,
+    rating: 4.8,
+    plays: 1650300,
+    badge: "ARCADE",
+    icon: "🧱",
+    bgGradient: "linear-gradient(135deg, #581c87, #1e1b4b)",
+    themeColor: "#c084fc",
+    tags: ["arcade", "breakout", "retro", "bricks"],
+    iframeUrl: "/games/breakout.html",
+    controls: [
+      "Move Mouse or Left / Right Arrow Keys to steer paddle",
+      "Spacebar or Left Click to launch the ball",
+      "Clear all bricks across levels without letting the ball fall"
+    ]
+  },
+  {
+    id: "vector-asteroids",
+    title: "Vector Asteroids",
+    category: "Action",
+    description: "Authentic vector arcade space shooter. Rotate and fire thrusters in zero gravity while blasting space boulders into dust.",
+    featured: false,
+    rating: 4.7,
+    plays: 1340000,
+    badge: "VINTAGE",
+    icon: "☄️",
+    bgGradient: "linear-gradient(135deg, #0e7490, #083344)",
+    themeColor: "#06b6d4",
+    tags: ["action", "space", "shooter", "retro"],
+    iframeUrl: "/games/asteroids.html",
+    controls: [
+      "Left / Right Arrow (or A / D) to rotate your ship",
+      "Up Arrow (or W) to engage forward rocket thrusters",
+      "Spacebar to fire dual photon blasters"
+    ]
+  },
+  {
+    id: "pong-1972",
+    title: "Pong 1972",
+    category: "Retro",
+    description: "Where video games began. Fast-paced digital table tennis simulation with smart AI computer opponent and 2-player local split keyboard battle.",
+    featured: false,
+    rating: 4.6,
+    plays: 940000,
+    badge: "RETRO",
+    icon: "🏓",
+    bgGradient: "linear-gradient(135deg, #09090b, #18181b)",
+    themeColor: "#38bdf8",
+    tags: ["retro", "arcade", "sports", "classic"],
+    iframeUrl: "/games/pong.html",
+    controls: [
+      "Player 1: W / S or Up / Down to move paddle",
+      "Player 2 (in 2P mode): Up / Down Arrow Keys",
+      "Deflect the square ball past opponent; first to 10 points wins"
+    ]
+  }
+];
