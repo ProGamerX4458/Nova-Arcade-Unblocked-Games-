@@ -22,22 +22,23 @@
   },
   {
     "id": "pacman",
-    "title": "Pac-Man Canvas",
+    "title": "Pac-Man (Nova Edition)",
     "category": "Retro",
-    "description": "The immortal arcade classic lovingly recreated in HTML5. Navigate the maze, gobble up pellets, and evade the ghosts Blinky, Pinky, Inky, and Clyde.",
+    "description": "Our custom built arcade classic! Navigate the neon maze, gobble pellets, dodge Blinky, Pinky, Inky & Clyde, trigger power pellets to chomp ghosts, and collect bonus cherries.",
     "featured": true,
     "rating": 4.9,
-    "plays": 5120300,
-    "badge": "CLASSIC",
+    "plays": 5240800,
+    "badge": "NOVA ORIGINAL",
     "icon": "🟡",
     "bgGradient": "linear-gradient(135deg, #1e1b4b, #312e81)",
     "themeColor": "#eab308",
-    "tags": ["retro", "arcade", "maze", "classic"],
-    "iframeUrl": "https://pacman.platzh1rsch.ch/",
+    "tags": ["retro", "arcade", "maze", "classic", "pacman"],
+    "iframeUrl": "/games/pacman.html",
     "controls": [
-      "Arrow Keys / WASD to steer Pac-Man through the maze",
-      "Collect all dots on the board to advance to the next stage",
-      "Eat large Power Pellets to temporarily hunt and eat ghosts"
+      "Arrow Keys / WASD or Swipe to steer Pac-Man through corridors",
+      "P or Esc to pause / resume play",
+      "Gobble Power Pellets to temporarily hunt and eat ghosts for 200, 400, 800, 1600 pts",
+      "Collect bonus cherries when they appear near the maze center"
     ]
   },
   {
