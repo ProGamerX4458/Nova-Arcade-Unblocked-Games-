@@ -62,7 +62,7 @@ export const Header = ({
   };
 
   const triggerPanic = () => {
-    window.location.href = 'https://classroom.google.com';
+    window.location.replace('https://www.google.com');
   };
 
   return (
@@ -176,7 +176,7 @@ export const Header = ({
             {/* Panic Button */}
             <button
               onClick={triggerPanic}
-              title="Panic Key! Redirects immediately to Google Classroom"
+              title="Panic Key! ([) Immediately redirects to google.com"
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/50 text-rose-300 hover:text-rose-100 text-xs font-bold transition-all shadow-sm shadow-rose-900/20 cursor-pointer"
             >
               <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />

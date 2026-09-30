@@ -283,7 +283,7 @@ export default function App() {
           </div>
 
           <div className="mt-6 pt-6 border-t border-slate-900 text-center text-[11px] text-slate-600">
-            Nova Arcade operates entirely client-side. Press <kbd className="px-1 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-400 font-mono">]</kbd> anytime for emergency panic redirect.
+            Nova Arcade operates entirely client-side. Press <kbd className="px-1 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-400 font-mono">]</kbd> anytime for emergency panic redirect to google.com.
           </div>
         </div>
       </footer>
