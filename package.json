@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
-    "build": "vite build && rm -rf docs assets && cp -r dist docs && cp -r dist/assets ./assets",
+    "build": "vite build && rm -rf docs assets games && cp -r dist docs && cp -r dist/assets ./assets && cp -r dist/games ./games && cp dist/games.json ./games.json && cp dist/play.html ./play.html && cp dist/404.html ./404.html",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist",
     "preview": "vite preview",

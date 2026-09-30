@@ -59,23 +59,50 @@ export function applyTabCloak(presetId) {
 }
 
 /**
+ * Resolves game URLs cleanly relative to the current application base path
+ * Prevents dropping repository sub-path on GitHub Pages (e.g. user.github.io/my-arcade/games/...)
+ */
+export function resolveGameUrl(url) {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:') || url.startsWith('blob:')) {
+    return url;
+  }
+
+  // Remove leading './' or '/'
+  let cleanPath = url;
+  if (cleanPath.startsWith('./')) {
+    cleanPath = cleanPath.slice(2);
+  } else if (cleanPath.startsWith('/')) {
+    cleanPath = cleanPath.slice(1);
+  }
+
+  const loc = window.location;
+  let basePath = loc.pathname || '/';
+  if (!basePath.endsWith('/')) {
+    const lastSegment = basePath.substring(basePath.lastIndexOf('/') + 1);
+    if (lastSegment.includes('.')) {
+      // Filename like index.html or play.html
+      basePath = basePath.substring(0, basePath.lastIndexOf('/') + 1);
+    } else {
+      // Subdirectory like /my-arcade
+      basePath = basePath + '/';
+    }
+  }
+
+  try {
+    return new URL(cleanPath, loc.origin + basePath).href;
+  } catch {
+    return loc.origin + '/' + cleanPath;
+  }
+}
+
+/**
  * Loads a game on a separate tab strictly using about:blank with an injected full-screen iframe
  * Keeps the URL bar permanently as about:blank and applies active tab cloaking
  */
 export function openGameInNewTab(url, title = 'Nova Arcade', htmlContent = null) {
   try {
-    let gameUrl = '';
-    if (url) {
-      if (url.startsWith('http://') || url.startsWith('https://')) {
-        gameUrl = url;
-      } else {
-        try {
-          gameUrl = new URL(url, window.location.href).href;
-        } catch {
-          gameUrl = window.location.origin + url;
-        }
-      }
-    }
+    const gameUrl = resolveGameUrl(url);
 
     // Open clean about:blank window
     let win = null;
@@ -89,7 +116,7 @@ export function openGameInNewTab(url, title = 'Nova Arcade', htmlContent = null)
       // Fallback popup trigger via anchor tag
       try {
         const a = document.createElement('a');
-        a.href = 'about:blank';
+        a.href = gameUrl || 'about:blank';
         a.target = '_blank';
         a.rel = 'noreferrer';
         document.body.appendChild(a);
@@ -106,9 +133,11 @@ export function openGameInNewTab(url, title = 'Nova Arcade', htmlContent = null)
     const tabTitle = savedCloak !== 'default' ? preset.title : (title || preset.title);
     const tabIcon = preset.icon || '/favicon.ico';
 
+    let activeHtml = htmlContent;
+
     const setupDoc = () => {
       try {
-        if (!win || !win.document) return false;
+        if (!win || win.closed || !win.document) return false;
         const doc = win.document;
 
         // Set title
@@ -153,13 +182,19 @@ export function openGameInNewTab(url, title = 'Nova Arcade', htmlContent = null)
             iframe.setAttribute('allowfullscreen', 'true');
             iframe.setAttribute('allow', 'accelerometer *; autoplay *; camera *; clipboard-read *; clipboard-write *; encrypted-media *; fullscreen *; geolocation *; gyroscope *; local-network-access *; magnetometer *; microphone *; midi *; payment *; picture-in-picture *; screen-wake-lock *; sync-xhr *; usb *; web-share *');
 
-            if (htmlContent) {
-              iframe.srcdoc = htmlContent;
+            if (activeHtml) {
+              iframe.srcdoc = activeHtml;
             } else if (gameUrl) {
               iframe.src = gameUrl;
             }
 
             doc.body.appendChild(iframe);
+          } else {
+            if (activeHtml && !iframe.srcdoc) {
+              iframe.srcdoc = activeHtml;
+            } else if (gameUrl && !iframe.src && !iframe.srcdoc) {
+              iframe.src = gameUrl;
+            }
           }
           return true;
         }
@@ -169,10 +204,36 @@ export function openGameInNewTab(url, title = 'Nova Arcade', htmlContent = null)
       return false;
     };
 
-    // Try immediately
+    // If local game HTML content wasn't passed directly, pre-fetch it so we can inject via srcdoc
+    if (!activeHtml && gameUrl && (gameUrl.includes('/games/') || gameUrl.endsWith('.html'))) {
+      fetch(gameUrl)
+        .then(res => {
+          if (res.ok) return res.text();
+          throw new Error('HTTP ' + res.status);
+        })
+        .then(text => {
+          if (text && text.includes('<html')) {
+            activeHtml = text;
+            try {
+              if (win && !win.closed && win.document) {
+                const iframe = win.document.getElementById('stealth-game-frame');
+                if (iframe) {
+                  iframe.srcdoc = text;
+                }
+              }
+            } catch (e) {
+              console.warn('Could not inject fetched HTML to stealth frame:', e);
+            }
+          }
+        })
+        .catch(err => {
+          console.warn('Could not prefetch game HTML:', err);
+        });
+    }
+
+    // Try immediately and retry for popup creation delay
     if (!setupDoc()) {
-      // Retry in quick intervals until body is ready in the new about:blank window
-      [10, 30, 80, 200].forEach(delay => {
+      [10, 30, 80, 200, 500].forEach(delay => {
         setTimeout(setupDoc, delay);
       });
     }

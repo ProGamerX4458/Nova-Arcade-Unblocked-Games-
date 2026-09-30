@@ -15,7 +15,7 @@ import {
   SlidersHorizontal,
   Flame
 } from 'lucide-react';
-import { openGameInNewTab } from '../utils/cloak.js';
+import { openGameInNewTab, resolveGameUrl } from '../utils/cloak.js';
 
 export const GamePlayer = ({
   game,
@@ -37,12 +37,13 @@ export const GamePlayer = ({
 
   useEffect(() => {
     setInlineHtml(game.htmlContent || null);
-    if (!game.htmlContent && game.iframeUrl && game.iframeUrl.startsWith('/')) {
-      const base = (import.meta.env.BASE_URL || './').replace(/\/$/, '');
-      const resolved = `${base}${game.iframeUrl}`;
+    if (!game.htmlContent && game.iframeUrl && (game.iframeUrl.startsWith('/') || game.iframeUrl.startsWith('./') || game.iframeUrl.includes('/games/'))) {
+      const resolved = resolveGameUrl(game.iframeUrl);
       fetch(resolved)
-        .catch(() => fetch(`.${game.iframeUrl}`))
-        .then(res => res.text())
+        .then(res => {
+          if (res.ok) return res.text();
+          throw new Error('HTTP ' + res.status);
+        })
         .then(text => {
           if (text && text.includes('<html')) {
             setInlineHtml(text);
@@ -214,7 +215,7 @@ export const GamePlayer = ({
             key={reloadKey}
             id={game.frameId || "sandboxFrame"}
             ref={iframeRef}
-            src={inlineHtml ? undefined : ((game.iframeUrl && game.iframeUrl.startsWith('/')) ? `${(import.meta.env.BASE_URL || './').replace(/\/$/, '')}${game.iframeUrl}` : game.iframeUrl)}
+            src={inlineHtml ? undefined : resolveGameUrl(game.iframeUrl)}
             srcDoc={inlineHtml || undefined}
             title={game.title}
             className="w-full h-full border-0 select-none"
