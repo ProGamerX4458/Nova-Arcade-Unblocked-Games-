@@ -8,16 +8,18 @@ import {
   Zap, 
   Puzzle, 
   Coffee,
-  ArrowUpDown
+  ArrowUpDown,
+  Trophy
 } from 'lucide-react';
 
 const CATEGORIES = [
   { id: 'All', label: 'All Games', icon: <Gamepad2 className="w-3.5 h-3.5" /> },
+  { id: 'InProgress', label: 'Saved Progress', icon: <Trophy className="w-3.5 h-3.5 text-amber-400" /> },
   { id: 'Featured', label: 'Featured', icon: <Sparkles className="w-3.5 h-3.5 text-amber-400" /> },
   { id: 'Favorites', label: 'Favorites', icon: <Heart className="w-3.5 h-3.5 text-rose-400" /> },
   { id: 'Arcade', label: 'Arcade', icon: <Flame className="w-3.5 h-3.5 text-cyan-400" /> },
-  { id: 'Action', label: 'Action', icon: <Zap className="w-3.5 h-3.5 text-pink-400" /> },
   { id: 'Retro', label: 'Retro', icon: <Clock className="w-3.5 h-3.5 text-purple-400" /> },
+  { id: 'Action', label: 'Action', icon: <Zap className="w-3.5 h-3.5 text-pink-400" /> },
   { id: 'Puzzle', label: 'Puzzle', icon: <Puzzle className="w-3.5 h-3.5 text-emerald-400" /> },
   { id: 'Casual', label: 'Casual', icon: <Coffee className="w-3.5 h-3.5 text-yellow-400" /> },
 ];
@@ -27,7 +29,8 @@ export const CategoryFilter = ({
   onSelectCategory,
   sortBy,
   onSortChange,
-  favoritesCount
+  favoritesCount,
+  progressCount = 0
 }) => {
   return (
     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
@@ -53,6 +56,13 @@ export const CategoryFilter = ({
                   isActive ? 'bg-slate-950 text-cyan-400' : 'bg-rose-500 text-white'
                 }`}>
                   {favoritesCount}
+                </span>
+              )}
+              {cat.id === 'InProgress' && progressCount > 0 && (
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                  isActive ? 'bg-slate-950 text-cyan-400' : 'bg-amber-400 text-slate-950 font-black'
+                }`}>
+                  {progressCount}
                 </span>
               )}
             </button>

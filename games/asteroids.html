@@ -42,6 +42,7 @@
 
   <div class="hud">
     <div>SCORE: <span id="score" class="val">0</span></div>
+    <div>HIGH: <span id="highScore" class="val">0</span></div>
     <div>LIVES: <span id="lives" class="val">▲ ▲ ▲</span></div>
     <div>WAVE: <span id="wave" class="val">1</span></div>
   </div>
@@ -56,13 +57,43 @@
     const canvas = document.getElementById('c');
     const ctx = canvas.getContext('2d');
     const scoreEl = document.getElementById('score');
+    const highScoreEl = document.getElementById('highScore');
     const livesEl = document.getElementById('lives');
     const waveEl = document.getElementById('wave');
 
     let score = 0;
+    let highScore = parseInt(localStorage.getItem('nova_asteroids_high') || '0', 10);
+    let maxWave = parseInt(localStorage.getItem('nova_asteroids_max_wave') || '1', 10);
     let lives = 3;
     let wave = 1;
     let gameOver = false;
+
+    if (highScoreEl) highScoreEl.textContent = highScore;
+
+    function saveProgress(isGameOver = false) {
+      if (score > highScore) {
+        highScore = score;
+        if (highScoreEl) highScoreEl.textContent = highScore;
+        localStorage.setItem('nova_asteroids_high', highScore.toString());
+      }
+      if (wave > maxWave) {
+        maxWave = wave;
+        localStorage.setItem('nova_asteroids_max_wave', maxWave.toString());
+      }
+      try {
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage({
+            type: 'NOVA_SAVE_PROGRESS',
+            gameId: 'retro-asteroids',
+            highScore: highScore,
+            highestLevel: maxWave,
+            score: score,
+            wave: wave,
+            gameFinished: isGameOver
+          }, '*');
+        }
+      } catch (e) {}
+    }
 
     // Ship
     const ship = {
@@ -278,6 +309,7 @@
           livesEl.textContent = '▲ '.repeat(Math.max(0, lives)).trim();
           if (lives <= 0) {
             gameOver = true;
+            saveProgress(true);
           } else {
             respawnShip();
           }
@@ -290,6 +322,7 @@
         wave++;
         waveEl.textContent = wave;
         snd(520, 'sine', 0.3);
+        saveProgress(false);
         createAsteroids(3 + wave);
       }
 
@@ -387,12 +420,14 @@
         ctx.fillStyle = '#ef4444';
         ctx.font = 'bold 24px monospace';
         ctx.textAlign = 'center';
-        ctx.fillText('MISSION FAILED', canvas.width / 2, canvas.height / 2 - 15);
+        ctx.fillText('MISSION FAILED', canvas.width / 2, canvas.height / 2 - 25);
         ctx.fillStyle = '#94a3b8';
         ctx.font = '14px monospace';
-        ctx.fillText(`Final Score: ${score}`, canvas.width / 2, canvas.height / 2 + 15);
+        ctx.fillText(`Score: ${score}  •  Best: ${highScore}`, canvas.width / 2, canvas.height / 2 + 5);
         ctx.fillStyle = '#22d3ee';
-        ctx.fillText('Press Space to Restart', canvas.width / 2, canvas.height / 2 + 45);
+        ctx.fillText(`Max Wave: ${maxWave}`, canvas.width / 2, canvas.height / 2 + 28);
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillText('Press Space to Restart', canvas.width / 2, canvas.height / 2 + 55);
       }
     }
 

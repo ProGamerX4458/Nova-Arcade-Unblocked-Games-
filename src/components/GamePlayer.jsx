@@ -13,7 +13,9 @@ import {
   Check, 
   Gamepad2, 
   SlidersHorizontal,
-  Flame
+  Flame,
+  Trophy,
+  Trash2
 } from 'lucide-react';
 import { openGameInNewTab, resolveGameUrl } from '../utils/cloak.js';
 
@@ -23,7 +25,9 @@ export const GamePlayer = ({
   onToggleFavorite,
   onBack,
   onSelectGame,
-  allGames
+  allGames,
+  progress,
+  onResetProgress
 }) => {
   const containerRef = useRef(null);
   const iframeRef = useRef(null);
@@ -262,6 +266,55 @@ export const GamePlayer = ({
           </pre>
         </div>
       )}
+
+      {/* Game Saved Progress Banner */}
+      <div className="max-w-5xl mx-auto p-4 rounded-2xl bg-gradient-to-r from-slate-900/90 via-slate-900/60 to-cyan-950/30 border border-slate-800 backdrop-blur-sm flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-amber-400">
+            <Trophy className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Save Data & Progress</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-[10px] text-emerald-400 font-semibold">Auto-Saving Active</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-0.5 text-xs">
+              <span className="text-slate-200">
+                Personal Best: <strong className="text-amber-400 font-mono text-sm">{progress?.highScore ? progress.highScore.toLocaleString() : '0'}</strong>
+              </span>
+              {progress?.highestLevel && progress.highestLevel > 1 ? (
+                <span className="text-slate-300">
+                  Highest Level: <strong className="text-cyan-400 font-mono">{progress.highestLevel}</strong>
+                </span>
+              ) : null}
+              <span className="text-slate-400">
+                Played: <strong className="text-slate-200">{progress?.gamesPlayed || 0} times</strong>
+              </span>
+              {progress?.lastPlayed ? (
+                <span className="text-slate-500 text-[11px]">
+                  Last active: {new Date(progress.lastPlayed).toLocaleDateString()}
+                </span>
+              ) : null}
+            </div>
+          </div>
+        </div>
+
+        {progress && (progress.highScore > 0 || progress.gamesPlayed > 0) && (
+          <button
+            onClick={() => {
+              if (window.confirm(`Reset saved progress for ${game.title}?`)) {
+                onResetProgress?.(game.id);
+              }
+            }}
+            title="Clear saved high score and stats for this game"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-950/60 hover:bg-rose-950/40 border border-slate-800 hover:border-rose-800/50 text-[11px] font-semibold text-slate-400 hover:text-rose-300 transition-colors cursor-pointer"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>Reset Save</span>
+          </button>
+        )}
+      </div>
 
       {/* Game Details & Controls Cards Grid */}
       <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">

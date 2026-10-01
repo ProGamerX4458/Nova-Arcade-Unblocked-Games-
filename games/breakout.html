@@ -51,6 +51,7 @@
 
   <div class="hud">
     <div class="pill">SCORE: <span id="score" class="val">0</span></div>
+    <div class="pill">BEST: <span id="best" class="val">0</span></div>
     <div class="pill">LIVES: <span id="lives" class="val">♥♥♥</span></div>
     <div class="pill">LEVEL: <span id="level" class="val">1</span></div>
   </div>
@@ -63,13 +64,43 @@
     const canvas = document.getElementById('c');
     const ctx = canvas.getContext('2d');
     const scoreEl = document.getElementById('score');
+    const bestEl = document.getElementById('best');
     const livesEl = document.getElementById('lives');
     const levelEl = document.getElementById('level');
 
     let score = 0;
+    let bestScore = parseInt(localStorage.getItem('nova_breakout_high') || '0', 10);
+    let maxLevel = parseInt(localStorage.getItem('nova_breakout_max_level') || '1', 10);
     let lives = 3;
     let level = 1;
     let gameState = 'ready'; // ready, playing, over, won
+
+    if (bestEl) bestEl.textContent = bestScore;
+
+    function saveProgress(isGameOver = false) {
+      if (score > bestScore) {
+        bestScore = score;
+        if (bestEl) bestEl.textContent = bestScore;
+        localStorage.setItem('nova_breakout_high', bestScore.toString());
+      }
+      if (level > maxLevel) {
+        maxLevel = level;
+        localStorage.setItem('nova_breakout_max_level', maxLevel.toString());
+      }
+      try {
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage({
+            type: 'NOVA_SAVE_PROGRESS',
+            gameId: 'neon-breakout',
+            highScore: bestScore,
+            highestLevel: maxLevel,
+            score: score,
+            level: level,
+            gameFinished: isGameOver
+          }, '*');
+        }
+      } catch (e) {}
+    }
 
     const paddle = {
       w: 80,
@@ -222,6 +253,7 @@
         sfx(160, 'sawtooth', 0.2);
         if (lives <= 0) {
           gameState = 'over';
+          saveProgress(true);
         } else {
           resetBall();
         }
@@ -273,6 +305,7 @@
         level++;
         levelEl.textContent = level;
         sfx(880, 'sine', 0.3);
+        saveProgress(false);
         initBricks();
         resetBall();
       }
@@ -346,12 +379,14 @@
         ctx.fillStyle = '#f43f5e';
         ctx.font = 'bold 28px system-ui';
         ctx.textAlign = 'center';
-        ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 15);
+        ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 25);
         ctx.fillStyle = '#e2e8f0';
         ctx.font = '14px system-ui';
-        ctx.fillText(`Final Score: ${score}`, canvas.width / 2, canvas.height / 2 + 15);
+        ctx.fillText(`Score: ${score}  •  Best: ${bestScore}`, canvas.width / 2, canvas.height / 2 + 5);
+        ctx.fillStyle = '#a855f7';
+        ctx.fillText(`Highest Level: ${maxLevel}`, canvas.width / 2, canvas.height / 2 + 30);
         ctx.fillStyle = '#38bdf8';
-        ctx.fillText('Click to Play Again', canvas.width / 2, canvas.height / 2 + 45);
+        ctx.fillText('Click to Play Again', canvas.width / 2, canvas.height / 2 + 60);
       }
     }
 

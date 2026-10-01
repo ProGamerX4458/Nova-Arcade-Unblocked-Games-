@@ -11,6 +11,7 @@ import { GameCard } from './components/GameCard.jsx';
 import { GamePlayer } from './components/GamePlayer.jsx';
 import { DEFAULT_GAMES } from './data/defaultGames.js';
 import { openGameInNewTab } from './utils/cloak.js';
+import { initProgressMessageListener, getAllProgress, clearGameProgress } from './utils/gameProgress.js';
 import { Gamepad2, CheckCircle2 } from 'lucide-react';
 
 export default function App() {
@@ -20,6 +21,21 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('popular');
   const [favorites, setFavorites] = useState([]);
+  const [progressData, setProgressData] = useState(() => getAllProgress());
+
+  // Listen for real-time progress updates from game iframes
+  useEffect(() => {
+    initProgressMessageListener();
+
+    const handleProgressUpdate = () => {
+      setProgressData(getAllProgress());
+    };
+
+    window.addEventListener('nova_progress_updated', handleProgressUpdate);
+    return () => {
+      window.removeEventListener('nova_progress_updated', handleProgressUpdate);
+    };
+  }, []);
 
   // Load games from /games.json and merge custom games from localStorage
   useEffect(() => {
@@ -99,6 +115,11 @@ export default function App() {
     });
   };
 
+  const handleResetProgress = (gameId) => {
+    clearGameProgress(gameId);
+    setProgressData(getAllProgress());
+  };
+
   // Filter & Sort games
   const filteredGames = useMemo(() => {
     return games
@@ -106,7 +127,11 @@ export default function App() {
         // Category filter
         if (selectedCategory === 'Featured' && !game.featured) return false;
         if (selectedCategory === 'Favorites' && !favorites.includes(game.id)) return false;
-        if (!['All', 'Featured', 'Favorites'].includes(selectedCategory) && game.category !== selectedCategory) {
+        if (selectedCategory === 'InProgress') {
+          const p = progressData[game.id];
+          if (!p || (!p.highScore && !p.gamesPlayed)) return false;
+        }
+        if (!['All', 'Featured', 'Favorites', 'InProgress'].includes(selectedCategory) && game.category !== selectedCategory) {
           return false;
         }
 
@@ -159,6 +184,8 @@ export default function App() {
             onBack={handleBackToLobby}
             onSelectGame={handleSelectGame}
             allGames={games}
+            progress={progressData[activeGame.id]}
+            onResetProgress={handleResetProgress}
           />
         ) : (
           /* Games Catalog View */
@@ -178,12 +205,13 @@ export default function App() {
               sortBy={sortBy}
               onSortChange={setSortBy}
               favoritesCount={favorites.length}
+              progressCount={Object.values(progressData).filter(p => p && (p.highScore > 0 || p.gamesPlayed > 0)).length}
             />
 
             {/* Games Grid Header / Results Count */}
             <div className="flex items-center justify-between mb-4 text-xs text-slate-400">
               <span className="font-semibold">
-                Showing <strong className="text-slate-100">{filteredGames.length}</strong> {selectedCategory === 'All' ? 'unblocked' : selectedCategory} games
+                Showing <strong className="text-slate-100">{filteredGames.length}</strong> {selectedCategory === 'All' ? 'unblocked' : (selectedCategory === 'InProgress' ? 'in-progress' : selectedCategory)} games
               </span>
               {searchQuery && (
                 <button
@@ -205,6 +233,7 @@ export default function App() {
                     isFavorite={favorites.includes(game.id)}
                     onToggleFavorite={handleToggleFavorite}
                     onPlay={handleSelectGame}
+                    progress={progressData[game.id]}
                   />
                 ))}
               </div>

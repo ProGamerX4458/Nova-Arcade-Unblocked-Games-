@@ -1,11 +1,12 @@
 import React from 'react';
-import { Play, Star, Users, Heart, ExternalLink } from 'lucide-react';
+import { Play, Star, Users, Heart, ExternalLink, Trophy } from 'lucide-react';
 
 export const GameCard = ({
   game,
   isFavorite,
   onToggleFavorite,
-  onPlay
+  onPlay,
+  progress
 }) => {
   return (
     <div
@@ -76,9 +77,28 @@ export const GameCard = ({
             {game.title}
           </h3>
 
-          <p className="text-slate-400 text-xs line-clamp-2 leading-relaxed">
+          <p className="text-slate-400 text-xs line-clamp-2 leading-relaxed mb-2.5">
             {game.description}
           </p>
+
+          {/* Saved Progress Indicator */}
+          {progress && (progress.highScore > 0 || progress.gamesPlayed > 0) && (
+            <div className="mb-1 px-2.5 py-1 rounded-lg bg-cyan-950/40 border border-cyan-800/40 flex items-center justify-between text-[11px]">
+              <span className="flex items-center gap-1 font-bold text-cyan-300">
+                <Trophy className="w-3 h-3 text-amber-400" />
+                <span>Best: {progress.highScore ? progress.highScore.toLocaleString() : 'Saved'}</span>
+              </span>
+              {progress.highestLevel > 1 ? (
+                <span className="text-[10px] font-semibold text-slate-400">
+                  Lvl {progress.highestLevel}
+                </span>
+              ) : progress.gamesPlayed > 0 ? (
+                <span className="text-[10px] font-semibold text-slate-400">
+                  {progress.gamesPlayed}x played
+                </span>
+              ) : null}
+            </div>
+          )}
         </div>
 
         {/* Footer info: plays count and tags */}

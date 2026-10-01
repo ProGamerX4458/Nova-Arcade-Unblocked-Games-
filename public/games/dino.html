@@ -658,6 +658,17 @@
         bestScore = Math.floor(score);
         localStorage.setItem('nova_trex_high_score', bestScore.toString());
       }
+      try {
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage({
+            type: 'NOVA_SAVE_PROGRESS',
+            gameId: 't-rex-runner',
+            highScore: bestScore,
+            score: Math.floor(score),
+            gameFinished: true
+          }, '*');
+        }
+      } catch (e) {}
     }
 
     function setNight(val) {

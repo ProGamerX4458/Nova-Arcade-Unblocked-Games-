@@ -438,6 +438,7 @@
     let map = [];
     let score = 0;
     let highScore = parseInt(localStorage.getItem('nova_pacman_high') || '0', 10);
+    let highestRound = parseInt(localStorage.getItem('nova_pacman_round') || '1', 10);
     let round = 1;
     let lives = 3;
     let totalPellets = 0;
@@ -452,6 +453,31 @@
     let stateTimer = 0;
 
     document.getElementById('highScoreVal').innerText = highScore;
+
+    function saveProgress(isGameOver = false) {
+      if (score > highScore) {
+        highScore = score;
+        localStorage.setItem('nova_pacman_high', highScore.toString());
+        document.getElementById('highScoreVal').innerText = highScore;
+      }
+      if (round > highestRound) {
+        highestRound = round;
+        localStorage.setItem('nova_pacman_round', highestRound.toString());
+      }
+      try {
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage({
+            type: 'NOVA_SAVE_PROGRESS',
+            gameId: 'pacman',
+            highScore: highScore,
+            highestLevel: highestRound,
+            score: score,
+            level: round,
+            gameFinished: isGameOver
+          }, '*');
+        }
+      } catch (e) {}
+    }
 
     // Pac-Man definition
     const pacman = {
@@ -1018,8 +1044,9 @@
     // --- Game Over & Level Clear ---
     function gameOver() {
       gameState = 'GAMEOVER';
+      saveProgress(true);
       document.getElementById('overlayTitle').innerText = 'GAME OVER';
-      document.getElementById('overlaySub').innerText = `Final Score: ${score}`;
+      document.getElementById('overlaySub').innerText = `Score: ${score}  •  Best: ${highScore}  •  Round: ${round}`;
       document.getElementById('startBtn').innerText = 'PLAY AGAIN';
       document.getElementById('overlay').classList.remove('hidden');
     }
@@ -1041,6 +1068,7 @@
     function nextLevel() {
       round++;
       document.getElementById('roundVal').innerText = round;
+      saveProgress(false);
       cloneMap();
       resetPositions();
       gameState = 'PLAYING';

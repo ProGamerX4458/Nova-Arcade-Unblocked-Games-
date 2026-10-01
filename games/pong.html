@@ -54,8 +54,14 @@
 <body>
 
   <div class="topbar">
-    <button id="btn1P" class="mode-btn active" onclick="setMode('1P')">1 Player (vs AI)</button>
-    <button id="btn2P" class="mode-btn" onclick="setMode('2P')">2 Players (Local)</button>
+    <div style="display: flex; gap: 8px;">
+      <button id="btn1P" class="mode-btn active" onclick="setMode('1P')">1 Player (vs AI)</button>
+      <button id="btn2P" class="mode-btn" onclick="setMode('2P')">2 Players (Local)</button>
+    </div>
+    <div style="display: flex; gap: 14px; font-size: 11px; font-weight: bold; color: #94a3b8; align-items: center;">
+      <span>AI WINS: <span id="winsVal" style="color: #38bdf8;">0</span></span>
+      <span>BEST STREAK: <span id="streakVal" style="color: #fbbf24;">0</span></span>
+    </div>
   </div>
 
   <canvas id="c" width="600" height="400"></canvas>
@@ -68,10 +74,49 @@
     const btn1P = document.getElementById('btn1P');
     const btn2P = document.getElementById('btn2P');
     const tipEl = document.getElementById('tip');
+    const winsEl = document.getElementById('winsVal');
+    const streakEl = document.getElementById('streakVal');
 
     let mode = '1P'; // '1P' or '2P'
     let p1Score = 0;
     let p2Score = 0;
+    let matchWinner = null;
+    let winnerTimer = 0;
+
+    let p1Wins = parseInt(localStorage.getItem('nova_pong_wins') || '0', 10);
+    let bestStreak = parseInt(localStorage.getItem('nova_pong_streak') || '0', 10);
+    let currentStreak = 0;
+
+    if (winsEl) winsEl.textContent = p1Wins;
+    if (streakEl) streakEl.textContent = bestStreak;
+
+    function saveProgress(wonAgainstAi) {
+      if (mode === '1P') {
+        if (wonAgainstAi) {
+          p1Wins++;
+          currentStreak++;
+          if (currentStreak > bestStreak) bestStreak = currentStreak;
+        } else {
+          currentStreak = 0;
+        }
+        if (winsEl) winsEl.textContent = p1Wins;
+        if (streakEl) streakEl.textContent = bestStreak;
+        localStorage.setItem('nova_pong_wins', p1Wins.toString());
+        localStorage.setItem('nova_pong_streak', bestStreak.toString());
+      }
+      try {
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage({
+            type: 'NOVA_SAVE_PROGRESS',
+            gameId: 'neon-pong',
+            highScore: bestStreak,
+            highestLevel: p1Wins,
+            score: p1Wins,
+            gameFinished: true
+          }, '*');
+        }
+      } catch (e) {}
+    }
 
     const padW = 12;
     const padH = 70;
@@ -193,8 +238,9 @@
         p1Score++;
         beep(750);
         if (p1Score >= 10) {
-          alert('Player 1 Wins!');
-          resetGame();
+          matchWinner = 'Player 1 Wins!';
+          saveProgress(true);
+          setTimeout(() => { resetGame(); matchWinner = null; }, 2200);
         } else {
           resetBall(-1);
         }
@@ -205,8 +251,9 @@
         p2Score++;
         beep(200);
         if (p2Score >= 10) {
-          alert(mode === '1P' ? 'Computer Wins!' : 'Player 2 Wins!');
-          resetGame();
+          matchWinner = mode === '1P' ? 'Computer Wins!' : 'Player 2 Wins!';
+          saveProgress(false);
+          setTimeout(() => { resetGame(); matchWinner = null; }, 2200);
         } else {
           resetBall(1);
         }
@@ -243,6 +290,15 @@
       // Ball
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(ball.x - ball.r, ball.y - ball.r, ball.r * 2, ball.r * 2);
+
+      // Winner Banner
+      if (matchWinner) {
+        ctx.fillStyle = 'rgba(2, 6, 23, 0.85)';
+        ctx.fillRect(0, canvas.height / 2 - 45, canvas.width, 90);
+        ctx.fillStyle = matchWinner.includes('Player 1') ? '#38bdf8' : '#ef4444';
+        ctx.font = 'bold 28px system-ui';
+        ctx.fillText(matchWinner, canvas.width / 2, canvas.height / 2 + 8);
+      }
     }
 
     function loop() {

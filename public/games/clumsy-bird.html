@@ -619,6 +619,17 @@
         isNewHigh = true;
         localStorage.setItem('nova_clumsy_bird_best', bestScore.toString());
       }
+      try {
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage({
+            type: 'NOVA_SAVE_PROGRESS',
+            gameId: 'clumsy-bird',
+            highScore: bestScore,
+            score: score,
+            gameFinished: true
+          }, '*');
+        }
+      } catch (e) {}
     }
 
     function resetGame() {
